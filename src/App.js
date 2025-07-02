@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { BookOpen, User, Award, XCircle, Star, TrendingUp, BarChart2, Settings, Sparkles, Loader, BrainCircuit, ChevronRight, Smile, Meh, Frown, Pause, Play, Shield } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';

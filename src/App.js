@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { BookOpen, User, Award, XCircle, Star, TrendingUp, BarChart2, Settings, Sparkles, Loader, BrainCircuit, ChevronRight, Smile, Meh, Frown, Pause, Play, Shield } from 'lucide-react';
+import { BookOpen, User, Award, XCircle, Star, TrendingUp, BarChart2, Settings, Sparkles, Loader, BrainCircuit, ChevronRight, Smile, Meh, Frown, Pause, Play } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -19,6 +19,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Enable offline persistence
+enableIndexedDbPersistence(db)
+  .catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn("Firebase persistence failed: multiple tabs open.");
+    } else if (err.code === 'unimplemented') {
+      console.warn("Firebase persistence is not available in this browser.");
+    }
+  });
 
 
 // --- DATA ---
@@ -47,20 +57,10 @@ const useWindowSize = () => {
 const LoadingModal = ({ message }) => ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-8 text-center flex flex-col items-center shadow-2xl"><Loader className="animate-spin text-blue-600 mb-4" size={48} /><p className="text-lg font-semibold text-gray-700">{message}</p></div></div> );
 const ExplanationModal = ({ text, onClose }) => ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl animate-fade-in-up"><div className="flex justify-between items-center mb-4"><h3 className="text-2xl font-bold text-gray-800 flex items-center"><BrainCircuit className="mr-2 text-purple-500"/> AI Tutor Explanation</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-600"><XCircle size={28} /></button></div><div className="prose max-w-none text-gray-600 max-h-[60vh] overflow-y-auto pr-2">{text.split('\n').map((p, i) => <p key={i}>{p}</p>)}</div><button onClick={onClose} className="mt-6 w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 transition">Got it!</button></div></div> );
 const BottomNavBar = ({ activeScreen, onNavigate }) => { const navItems = [ { name: 'dashboard', icon: BookOpen, label: 'Learn' }, { name: 'subjects', icon: BarChart2, label: 'Subjects' }, { name: 'profile', icon: User, label: 'Profile' } ]; return ( <div className="bg-white shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] w-full"><div className="flex justify-around max-w-lg mx-auto">{navItems.map(item => ( <button key={item.name} onClick={() => onNavigate(item.name)} className={`flex flex-col items-center justify-center w-full py-2 px-1 transition-colors duration-300 ${activeScreen === item.name ? 'text-blue-600' : 'text-gray-400 hover:text-blue-500'}`}><item.icon size={24} /><span className="text-xs font-bold mt-1">{item.label}</span></button> ))}</div></div> ); };
-const LoginScreen = ({ onLogin, onSignUp, onAdminToggle }) => {
-    const [tapCount, setTapCount] = useState(0);
+const LoginScreen = ({ onLogin, onSignUp }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoginView, setIsLoginView] = useState(true);
-
-    const handleTitleTap = () => {
-        const newTapCount = tapCount + 1;
-        setTapCount(newTapCount);
-        if (newTapCount >= 5) {
-            onAdminToggle();
-            setTapCount(0);
-        }
-    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -74,7 +74,7 @@ const LoginScreen = ({ onLogin, onSignUp, onAdminToggle }) => {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-blue-600 text-white p-4">
             <BookOpen size={80} className="mb-4 text-blue-200" />
-            <h1 onClick={handleTitleTap} className="text-5xl font-bold mb-2 cursor-pointer select-none">LearningSphere</h1>
+            <h1 className="text-5xl font-bold mb-2 select-none">LearningSphere</h1>
             <p className="text-lg text-blue-200 mb-8">Quality Education for All.</p>
             <div className="w-full max-w-sm bg-white text-gray-800 rounded-lg shadow-2xl p-8">
                 <h2 className="text-2xl font-bold mb-6 text-center">{isLoginView ? 'Welcome Back!' : 'Create Account'}</h2>
@@ -110,20 +110,8 @@ const LevelSelectionScreen = ({ onComplete, userProfile, setUserProfile }) => {
 };
 const Dashboard = ({ userProfile, subjects, onNavigate, onStartQuiz }) => ( <div className="p-4 md:p-6 pb-6"><header className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-gray-800">Hello, {userProfile.name}!</h1><p className="text-gray-500">Let's continue your {userProfile.grade} journey.</p></div><div className="w-12 h-12 bg-gray-300 rounded-full cursor-pointer" onClick={() => onNavigate('profile')}><img src={`https://placehold.co/100x100/E2E8F0/4A5568?text=${userProfile.name.charAt(0)}`} alt="Profile" className="rounded-full"/></div></header><div className="bg-blue-600 text-white p-6 rounded-2xl shadow-lg mb-6 flex items-center justify-between"><div><h2 className="text-xl font-bold">Daily Challenge</h2><p className="text-blue-200 text-sm">A new quiz awaits in {subjects.length > 0 ? subjects[2].name : 'Science'}!</p></div>{subjects.length > 0 && <button onClick={() => onStartQuiz(subjects[2])} className="bg-white text-blue-600 font-bold py-2 px-4 rounded-lg hover:bg-blue-100 transition">Start</button>}</div><h3 className="text-2xl font-bold text-gray-800 mb-4">Continue Learning</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{subjects.filter(s => s.progress > 0 && s.progress < 1).map(subject => ( <div key={subject.id} className="bg-white p-4 rounded-2xl shadow-md cursor-pointer hover:shadow-xl transition-shadow" onClick={() => onStartQuiz(subject)}><div className="flex items-center mb-3"><div className={`w-12 h-12 ${subject.color} rounded-lg flex items-center justify-center mr-4`}><subject.icon size={24} className="text-white" /></div><div><h4 className="font-bold text-lg text-gray-800">{subject.name}</h4><p className="text-sm text-gray-500">{subject.modules} Modules</p></div></div><div className="w-full bg-gray-200 rounded-full h-2.5"><div className={`${subject.color} h-2.5 rounded-full`} style={{ width: `${subject.progress * 100}%` }}></div></div><p className="text-right text-sm text-gray-500 mt-1">{Math.round(subject.progress * 100)}% Complete</p></div> ))}</div><div className="mt-6"><button onClick={() => onNavigate('subjects')} className="w-full bg-gray-800 text-white p-4 rounded-xl font-bold text-lg hover:bg-gray-900 transition-colors">Explore All Subjects</button></div></div> );
 const SubjectsScreen = ({ subjects, onGenerateQuiz }) => ( <div className="p-4 md:p-6 pb-6"><h1 className="text-3xl font-bold text-gray-800 mb-6">All Subjects</h1><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">{subjects.map(subject => ( <div key={subject.id} className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col"><div className={`${subject.color} h-24 flex items-center justify-center`}><subject.icon size={48} className="text-white" /></div><div className="p-6 flex flex-col flex-grow"><h3 className="text-2xl font-bold text-gray-800 mb-2">{subject.name}</h3><p className="text-gray-600 mb-4 flex-grow">{subject.description}</p><div className="space-y-2 mt-auto"><button onClick={() => onGenerateQuiz(subject)} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center"><Sparkles size={20} className="mr-2" /> Generate AI Quiz</button></div></div></div> ))}</div></div> );
-const ProfileScreen = ({ userProfile, onNavigate, isAdminMode, onLogout }) => ( <div className="p-4 md:p-6 pb-6"><div className="max-w-2xl mx-auto"><div className="bg-white rounded-2xl shadow-lg p-6 text-center"><img src={`https://placehold.co/128x128/3B82F6/FFFFFF?text=${userProfile.name.charAt(0)}`} alt="Profile" className="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-white shadow-md"/><h1 className="text-3xl font-bold text-gray-800">{userProfile.name}</h1><p className="text-blue-600 font-semibold text-lg mb-6">{userProfile.grade}</p><div className="flex justify-around text-center mb-6 border-t border-b border-gray-200 py-4"><div><p className="text-2xl font-bold text-blue-600">{userProfile.points}</p><p className="text-sm text-gray-500">Points</p></div><div><p className="text-2xl font-bold text-blue-600">{userProfile.streaks}</p><p className="text-sm text-gray-500">Day Streak</p></div><div><p className="text-2xl font-bold text-blue-600">{userProfile.badges.length}</p><p className="text-sm text-gray-500">Badges</p></div></div></div><div className="mt-6 bg-white rounded-2xl shadow-lg p-6"><h2 className="text-2xl font-bold text-gray-800 mb-4">My Badges</h2><div className="flex flex-wrap gap-4 justify-center">{userProfile.badges.map((badge, index) => ( <div key={index} className="flex flex-col items-center p-2 text-center w-24"><div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-2"><badge.icon size={32} className={badge.color} /></div><p className="text-sm font-semibold text-gray-700">{badge.name}</p></div> ))}</div></div>
-{isAdminMode && (<div className="mt-6"><button onClick={() => onNavigate('admin')} className="w-full bg-red-600 text-white p-3 rounded-xl font-bold text-lg hover:bg-red-700 transition-colors flex items-center justify-center"><Shield size={20} className="mr-2" /> Admin Portal</button></div>)}
+const ProfileScreen = ({ userProfile, onLogout }) => ( <div className="p-4 md:p-6 pb-6"><div className="max-w-2xl mx-auto"><div className="bg-white rounded-2xl shadow-lg p-6 text-center"><img src={`https://placehold.co/128x128/3B82F6/FFFFFF?text=${userProfile.name.charAt(0)}`} alt="Profile" className="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-white shadow-md"/><h1 className="text-3xl font-bold text-gray-800">{userProfile.name}</h1><p className="text-blue-600 font-semibold text-lg mb-6">{userProfile.grade}</p><div className="flex justify-around text-center mb-6 border-t border-b border-gray-200 py-4"><div><p className="text-2xl font-bold text-blue-600">{userProfile.points}</p><p className="text-sm text-gray-500">Points</p></div><div><p className="text-2xl font-bold text-blue-600">{userProfile.streaks}</p><p className="text-sm text-gray-500">Day Streak</p></div><div><p className="text-2xl font-bold text-blue-600">{userProfile.badges.length}</p><p className="text-sm text-gray-500">Badges</p></div></div></div><div className="mt-6 bg-white rounded-2xl shadow-lg p-6"><h2 className="text-2xl font-bold text-gray-800 mb-4">My Badges</h2><div className="flex flex-wrap gap-4 justify-center">{userProfile.badges.map((badge, index) => ( <div key={index} className="flex flex-col items-center p-2 text-center w-24"><div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-2"><badge.icon size={32} className={badge.color} /></div><p className="text-sm font-semibold text-gray-700">{badge.name}</p></div> ))}</div></div>
 <div className="mt-6 bg-white rounded-2xl shadow-lg p-6"><h2 className="text-2xl font-bold text-gray-800 mb-4">Settings</h2><div className="space-y-2"><button className="w-full flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg"><User className="mr-3" /> Account Information</button><button className="w-full flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg"><Settings className="mr-3" /> App Preferences</button><button onClick={onLogout} className="w-full flex items-center p-3 text-red-500 hover:bg-red-50 rounded-lg font-bold"><XCircle className="mr-3" /> Logout</button></div></div></div></div> );
-const AdminPortalScreen = ({ onResetProfile, onAddPoints, onGiveAllBadges }) => (
-    <div className="p-4 md:p-6 pb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Admin Portal</h1>
-        <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800">Testing Tools</h2>
-            <button onClick={onAddPoints} className="w-full bg-blue-500 text-white p-3 rounded-lg font-bold hover:bg-blue-600 transition">Add 1000 Points</button>
-            <button onClick={onGiveAllBadges} className="w-full bg-green-500 text-white p-3 rounded-lg font-bold hover:bg-green-600 transition">Give All Badges</button>
-            <button onClick={onResetProfile} className="w-full bg-red-500 text-white p-3 rounded-lg font-bold hover:bg-red-600 transition">Reset Profile (Points & Badges)</button>
-        </div>
-    </div>
-);
 const QuestionTimer = ({ isPaused, onTogglePause, duration = 3000 }) => {
     const [progress, setProgress] = useState(100);
     const intervalRef = useRef();
@@ -243,6 +231,7 @@ const QuizScreen = ({ question, onAnswer, showResult, score, totalQuestions, onR
 export default function App() {
     const [screen, setScreen] = useState('login');
     const [userProfile, setUserProfile] = useState(null);
+    const [authStatus, setAuthStatus] = useState('checking'); // 'checking', 'loggedIn', 'loggedOut'
     const [currentSubject, setCurrentSubject] = useState(null);
     const [quizQuestions, setQuizQuestions] = useState([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -256,7 +245,6 @@ export default function App() {
     const [explanationText, setExplanationText] = useState('');
     const [subjects, setSubjects] = useState([]);
     const [reward, setReward] = useState(null);
-    const [isAdminMode, setIsAdminMode] = useState(false);
     const quizTimerRef = useRef(null);
 
     const navigate = useCallback((screenName) => {
@@ -265,40 +253,40 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        setIsLoading(true);
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
                     const userDoc = await getDoc(doc(db, "users", user.uid));
                     if (userDoc.exists()) {
-                        const userData = userDoc.data();
-                        setUserProfile(userData);
-                        if (userData.grade) {
-                            navigate('dashboard');
-                        } else {
-                            navigate('level');
-                        }
+                        setUserProfile(userDoc.data());
                     } else {
-                        // This case handles if a user exists in Auth but not Firestore.
-                        // We log them out to prevent a broken state.
-                        await signOut(auth);
-                        setUserProfile(null);
-                        navigate('login');
+                        const newUserProfile = { uid: user.uid, email: user.email, name: "New Learner", level: '', grade: '', confidence: '', points: 0, streaks: 0, badges: [] };
+                        await setDoc(doc(db, "users", user.uid), newUserProfile);
+                        setUserProfile(newUserProfile);
                     }
+                    setAuthStatus('loggedIn');
                 } catch (error) {
-                    console.error("Error fetching user data:", error);
-                    await signOut(auth);
-                    setUserProfile(null);
-                    navigate('login');
+                    console.error("Error handling auth state change:", error);
                 }
             } else {
                 setUserProfile(null);
-                navigate('login');
+                setAuthStatus('loggedOut');
             }
-            setIsLoading(false);
         });
         return unsubscribe;
-    }, [navigate]);
+    }, []);
+
+    useEffect(() => {
+        if (authStatus === 'loggedIn' && userProfile) {
+            if (userProfile.grade) {
+                navigate('dashboard');
+            } else {
+                navigate('level');
+            }
+        } else if (authStatus === 'loggedOut') {
+            navigate('login');
+        }
+    }, [authStatus, userProfile, navigate]);
 
     useEffect(() => {
         if (userProfile && userProfile.level) {
@@ -453,26 +441,11 @@ export default function App() {
         setIsLoading(true);
         setLoadingMessage("Creating your account...");
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            const newUserProfile = {
-                uid: user.uid,
-                email: user.email,
-                name: "New Learner",
-                level: '',
-                grade: '',
-                confidence: '',
-                points: 0,
-                streaks: 0,
-                badges: []
-            };
-            await setDoc(doc(db, "users", user.uid), newUserProfile);
-            setUserProfile(newUserProfile);
-            navigate('level');
+            await createUserWithEmailAndPassword(auth, email, password);
+            // onAuthStateChanged will handle the rest, no need to call setIsLoading(false) here
         } catch (error) {
             alert(error.message);
-        } finally {
-            setIsLoading(false);
+            setIsLoading(false); // Only set loading to false on error
         }
     };
     
@@ -481,58 +454,23 @@ export default function App() {
         setLoadingMessage("Logging in...");
         try {
             await signInWithEmailAndPassword(auth, email, password);
+            // onAuthStateChanged will handle the rest, and authStatus change will hide the loader
         } catch (error) {
             alert(error.message);
-        } finally {
-            setIsLoading(false);
+            setIsLoading(false); // Only set loading to false on error
         }
     };
 
     const handleLogout = async () => {
         await signOut(auth);
-        setUserProfile(null);
-        navigate('login');
-    };
-
-    // --- Admin Functions ---
-    const toggleAdminMode = () => {
-        setIsAdminMode(prev => !prev);
-        setReward({ type: 'badge', message: `Admin Mode ${!isAdminMode ? 'Enabled' : 'Disabled'}`});
-    };
-    const resetProfile = async () => {
-        const updatedProfile = {...userProfile, points: 0, badges: [] };
-        await setDoc(doc(db, "users", auth.currentUser.uid), updatedProfile);
-        setUserProfile(updatedProfile);
-        setReward({ type: 'badge', message: 'Profile Reset!' });
-    };
-    const addPoints = async () => {
-        const updatedProfile = {...userProfile, points: userProfile.points + 1000 };
-        await setDoc(doc(db, "users", auth.currentUser.uid), updatedProfile, { merge: true });
-        setUserProfile(updatedProfile);
-        setReward({ type: 'points', message: '+1000 Points!' });
-    };
-    const giveAllBadges = async () => {
-        if (!userProfile.level) {
-            alert("Please select a grade level first.");
-            return;
-        }
-        const allBadges = getSubjectsForLevel(userProfile.level).map(subject => ({
-            name: `${subject.name} Pro`,
-            icon: subject.icon,
-            color: subject.color.replace('bg-', 'text-')
-        }));
-        const updatedProfile = {...userProfile, badges: allBadges };
-        await setDoc(doc(db, "users", auth.currentUser.uid), updatedProfile, { merge: true });
-        setUserProfile(updatedProfile);
-        setReward({ type: 'badge', message: 'All Badges Awarded!' });
     };
 
     const renderScreen = () => {
-        if (isLoading && !userProfile) {
+        if (authStatus === 'checking') {
             return <LoadingModal message="Loading LearningSphere..." />;
         }
-        if (!userProfile) {
-            return <LoginScreen onLogin={handleLogin} onSignUp={handleSignUp} onAdminToggle={toggleAdminMode} />;
+        if (authStatus === 'loggedOut' || !userProfile) {
+            return <LoginScreen onLogin={handleLogin} onSignUp={handleSignUp} />;
         }
 
         switch (screen) {
@@ -541,8 +479,7 @@ export default function App() {
             case 'dashboard': return <Dashboard userProfile={userProfile} subjects={subjects} onNavigate={navigate} onStartQuiz={handleGenerateQuiz} />;
             case 'subjects': return <SubjectsScreen subjects={subjects} onGenerateQuiz={handleGenerateQuiz} />;
             case 'quiz': return <QuizScreen question={quizQuestions[currentQuestionIndex]} onAnswer={handleAnswer} showResult={showResult} score={score} totalQuestions={quizQuestions.length} onRestart={() => handleGenerateQuiz(currentSubject)} onExit={() => navigate('subjects')} selectedAnswer={selectedAnswer} isCorrect={isCorrect} onExplain={handleExplainAnswer} questionIndex={currentQuestionIndex} quizControl={{ advanceToNextQuestion, quizTimerRef, score }} />;
-            case 'profile': return <ProfileScreen userProfile={userProfile} onNavigate={navigate} isAdminMode={isAdminMode} onLogout={handleLogout} />;
-            case 'admin': return <AdminPortalScreen onResetProfile={resetProfile} onAddPoints={addPoints} onGiveAllBadges={giveAllBadges} />;
+            case 'profile': return <ProfileScreen userProfile={userProfile} onNavigate={navigate} onLogout={handleLogout} />;
             default: return <LoadingModal message="Loading..." />;
         }
     };
@@ -557,7 +494,7 @@ export default function App() {
                 {renderScreen()}
             </main>
 
-            {userProfile && screen !== 'login' && screen !== 'level' && screen !== 'assessment' && screen !== 'admin' && (
+            {userProfile && screen !== 'login' && screen !== 'level' && screen !== 'assessment' && (
                 <footer className="flex-shrink-0 z-10">
                     <BottomNavBar activeScreen={screen} onNavigate={navigate} />
                 </footer>

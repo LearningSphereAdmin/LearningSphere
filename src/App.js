@@ -278,12 +278,16 @@ export default function App() {
 
     useEffect(() => {
         if (authStatus === 'loggedIn' && userProfile) {
+            setIsLoading(false); // Turn off any lingering loading indicators
+            setLoadingMessage('');
             if (userProfile.grade) {
                 navigate('dashboard');
             } else {
                 navigate('level');
             }
         } else if (authStatus === 'loggedOut') {
+            setIsLoading(false);
+            setLoadingMessage('');
             navigate('login');
         }
     }, [authStatus, userProfile, navigate]);
@@ -442,10 +446,9 @@ export default function App() {
         setLoadingMessage("Creating your account...");
         try {
             await createUserWithEmailAndPassword(auth, email, password);
-            // onAuthStateChanged will handle the rest, no need to call setIsLoading(false) here
         } catch (error) {
             alert(error.message);
-            setIsLoading(false); // Only set loading to false on error
+            setIsLoading(false);
         }
     };
     
@@ -454,10 +457,9 @@ export default function App() {
         setLoadingMessage("Logging in...");
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            // onAuthStateChanged will handle the rest, and authStatus change will hide the loader
         } catch (error) {
             alert(error.message);
-            setIsLoading(false); // Only set loading to false on error
+            setIsLoading(false);
         }
     };
 
@@ -479,7 +481,7 @@ export default function App() {
             case 'dashboard': return <Dashboard userProfile={userProfile} subjects={subjects} onNavigate={navigate} onStartQuiz={handleGenerateQuiz} />;
             case 'subjects': return <SubjectsScreen subjects={subjects} onGenerateQuiz={handleGenerateQuiz} />;
             case 'quiz': return <QuizScreen question={quizQuestions[currentQuestionIndex]} onAnswer={handleAnswer} showResult={showResult} score={score} totalQuestions={quizQuestions.length} onRestart={() => handleGenerateQuiz(currentSubject)} onExit={() => navigate('subjects')} selectedAnswer={selectedAnswer} isCorrect={isCorrect} onExplain={handleExplainAnswer} questionIndex={currentQuestionIndex} quizControl={{ advanceToNextQuestion, quizTimerRef, score }} />;
-            case 'profile': return <ProfileScreen userProfile={userProfile} onNavigate={navigate} onLogout={handleLogout} />;
+            case 'profile': return <ProfileScreen userProfile={userProfile} onLogout={handleLogout} />;
             default: return <LoadingModal message="Loading..." />;
         }
     };

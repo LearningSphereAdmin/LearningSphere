@@ -74,7 +74,7 @@ const LoginScreen = ({ onLogin, onSignUp, onAdminToggle }) => {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-blue-600 text-white p-4">
             <BookOpen size={80} className="mb-4 text-blue-200" />
-            <h1 onClick={handleTitleTap} className="text-5xl font-bold mb-2 cursor-pointer select-none">LearnSphere</h1>
+            <h1 onClick={handleTitleTap} className="text-5xl font-bold mb-2 cursor-pointer select-none">LearningSphere</h1>
             <p className="text-lg text-blue-200 mb-8">Quality Education for All.</p>
             <div className="w-full max-w-sm bg-white text-gray-800 rounded-lg shadow-2xl p-8">
                 <h2 className="text-2xl font-bold mb-6 text-center">{isLoginView ? 'Welcome Back!' : 'Create Account'}</h2>
@@ -268,15 +268,28 @@ export default function App() {
         setIsLoading(true);
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    setUserProfile(userData);
-                    if (userData.grade) {
-                        navigate('dashboard');
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        setUserProfile(userData);
+                        if (userData.grade) {
+                            navigate('dashboard');
+                        } else {
+                            navigate('level');
+                        }
                     } else {
-                        navigate('level');
+                        // This case handles if a user exists in Auth but not Firestore.
+                        // We log them out to prevent a broken state.
+                        await signOut(auth);
+                        setUserProfile(null);
+                        navigate('login');
                     }
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
+                    await signOut(auth);
+                    setUserProfile(null);
+                    navigate('login');
                 }
             } else {
                 setUserProfile(null);
@@ -516,7 +529,7 @@ export default function App() {
 
     const renderScreen = () => {
         if (isLoading && !userProfile) {
-            return <LoadingModal message="Loading LearnSphere..." />;
+            return <LoadingModal message="Loading LearningSphere..." />;
         }
         if (!userProfile) {
             return <LoginScreen onLogin={handleLogin} onSignUp={handleSignUp} onAdminToggle={toggleAdminMode} />;

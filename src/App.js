@@ -1,13 +1,10 @@
-// Final build test for Cloudflare
 import React, { useState, useEffect, useRef } from 'react';
-// ... the rest of the file
-import { BookOpen, User, Award, CheckCircle, XCircle, Star, TrendingUp, BarChart2, Settings, Sparkles, Loader, BrainCircuit, ChevronRight, Smile, Meh, Frown, Pause, Play, Plus, Shield } from 'lucide-react';
+import { BookOpen, User, Award, XCircle, Star, TrendingUp, BarChart2, Settings, Sparkles, Loader, BrainCircuit, ChevronRight, Smile, Meh, Frown, Pause, Play, Shield } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
-// This is now connected to your live Firebase project.
 const firebaseConfig = {
   apiKey: "AIzaSyCeOcZADG2UgL2nOna53sTjGEfLVBiBHTQ",
   authDomain: "learnsphere-9f7de.firebaseapp.com",
@@ -115,7 +112,7 @@ const Dashboard = ({ userProfile, subjects, onNavigate, onStartQuiz }) => ( <div
 const SubjectsScreen = ({ subjects, onGenerateQuiz }) => ( <div className="p-4 md:p-6 pb-6"><h1 className="text-3xl font-bold text-gray-800 mb-6">All Subjects</h1><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">{subjects.map(subject => ( <div key={subject.id} className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col"><div className={`${subject.color} h-24 flex items-center justify-center`}><subject.icon size={48} className="text-white" /></div><div className="p-6 flex flex-col flex-grow"><h3 className="text-2xl font-bold text-gray-800 mb-2">{subject.name}</h3><p className="text-gray-600 mb-4 flex-grow">{subject.description}</p><div className="space-y-2 mt-auto"><button onClick={() => onGenerateQuiz(subject)} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center"><Sparkles size={20} className="mr-2" /> Generate AI Quiz</button></div></div></div> ))}</div></div> );
 const ProfileScreen = ({ userProfile, onNavigate, isAdminMode, onLogout }) => ( <div className="p-4 md:p-6 pb-6"><div className="max-w-2xl mx-auto"><div className="bg-white rounded-2xl shadow-lg p-6 text-center"><img src={`https://placehold.co/128x128/3B82F6/FFFFFF?text=${userProfile.name.charAt(0)}`} alt="Profile" className="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-white shadow-md"/><h1 className="text-3xl font-bold text-gray-800">{userProfile.name}</h1><p className="text-blue-600 font-semibold text-lg mb-6">{userProfile.grade}</p><div className="flex justify-around text-center mb-6 border-t border-b border-gray-200 py-4"><div><p className="text-2xl font-bold text-blue-600">{userProfile.points}</p><p className="text-sm text-gray-500">Points</p></div><div><p className="text-2xl font-bold text-blue-600">{userProfile.streaks}</p><p className="text-sm text-gray-500">Day Streak</p></div><div><p className="text-2xl font-bold text-blue-600">{userProfile.badges.length}</p><p className="text-sm text-gray-500">Badges</p></div></div></div><div className="mt-6 bg-white rounded-2xl shadow-lg p-6"><h2 className="text-2xl font-bold text-gray-800 mb-4">My Badges</h2><div className="flex flex-wrap gap-4 justify-center">{userProfile.badges.map((badge, index) => ( <div key={index} className="flex flex-col items-center p-2 text-center w-24"><div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-2"><badge.icon size={32} className={badge.color} /></div><p className="text-sm font-semibold text-gray-700">{badge.name}</p></div> ))}</div></div>
 {isAdminMode && (<div className="mt-6"><button onClick={() => onNavigate('admin')} className="w-full bg-red-600 text-white p-3 rounded-xl font-bold text-lg hover:bg-red-700 transition-colors flex items-center justify-center"><Shield size={20} className="mr-2" /> Admin Portal</button></div>)}
-<div className="mt-6 bg-white rounded-2xl shadow-lg p-6"><h2 className="text-2xl font-bold text-gray-800 mb-4">Settings</h2><div className="space-y-2"><a href="#" className="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg"><User className="mr-3" /> Account Information</a><a href="#" className="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg"><Settings className="mr-3" /> App Preferences</a><button onClick={onLogout} className="w-full flex items-center p-3 text-red-500 hover:bg-red-50 rounded-lg font-bold"><XCircle className="mr-3" /> Logout</button></div></div></div></div> );
+<div className="mt-6 bg-white rounded-2xl shadow-lg p-6"><h2 className="text-2xl font-bold text-gray-800 mb-4">Settings</h2><div className="space-y-2"><button className="w-full flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg"><User className="mr-3" /> Account Information</button><button className="w-full flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg"><Settings className="mr-3" /> App Preferences</button><button onClick={onLogout} className="w-full flex items-center p-3 text-red-500 hover:bg-red-50 rounded-lg font-bold"><XCircle className="mr-3" /> Logout</button></div></div></div></div> );
 const AdminPortalScreen = ({ onResetProfile, onAddPoints, onGiveAllBadges }) => (
     <div className="p-4 md:p-6 pb-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Admin Portal</h1>
@@ -193,7 +190,7 @@ const RewardNotification = ({ reward, onDismiss }) => {
 const QuizScreen = ({ question, onAnswer, showResult, score, totalQuestions, onRestart, onExit, selectedAnswer, isCorrect, onExplain, questionIndex, isAssessment = false, quizControl }) => {
     const [isTimerPaused, setIsTimerPaused] = useState(false);
     const { advanceToNextQuestion, quizTimerRef } = quizControl;
-    const [width, height] = useWindowSize();
+    const [, height] = useWindowSize();
     const isShortScreen = height < 700; // Threshold for smaller UI
 
     const handleTogglePause = () => {
@@ -262,7 +259,13 @@ export default function App() {
     const [isAdminMode, setIsAdminMode] = useState(false);
     const quizTimerRef = useRef(null);
 
+    const navigate = useCallback((screenName) => {
+        setScreen(screenName);
+        if (screenName !== 'quiz' && screenName !== 'assessment') resetQuizState();
+    }, []);
+
     useEffect(() => {
+        setIsLoading(true);
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -282,7 +285,7 @@ export default function App() {
             setIsLoading(false);
         });
         return unsubscribe;
-    }, []);
+    }, [navigate]);
 
     useEffect(() => {
         if (userProfile && userProfile.level) {
@@ -290,11 +293,6 @@ export default function App() {
         }
     }, [userProfile]);
 
-    const navigate = (screenName) => {
-        setScreen(screenName);
-        if (screenName !== 'quiz' && screenName !== 'assessment') resetQuizState();
-    };
-    
     const resetQuizState = () => {
         clearTimeout(quizTimerRef.current);
         setCurrentQuestionIndex(0);
